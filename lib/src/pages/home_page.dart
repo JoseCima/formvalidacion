@@ -14,17 +14,15 @@ class HomePage extends StatelessWidget {
         title: Text('Home Page - José Cima'),
         
       ),
-      body: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            Text('Email: ${bloc.email}'),
-            Divider(),
-            Text('Password: ${bloc.password}'),
-
-          ],
-
-        ),
+      body: Container(),
+      floatingActionButton: _crearBoton(context),
     );
+  }
+
+  _crearBoton(BuildContext context){
+    return FloatingActionButton(
+      backgroundColor: Colors.pink[300],
+      onPressed: ()=>Navigator.pushNamed(context, 'producto'),
+      child: Icon(Icons.add));
   }
 }
