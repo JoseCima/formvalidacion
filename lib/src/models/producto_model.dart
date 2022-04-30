@@ -17,7 +17,7 @@ class ScanModel {
          this.fotoUrl,
     });
 
-    int? id;
+    String? id;
     String titulo;
     double valor;
     bool disponible;
@@ -32,7 +32,7 @@ class ScanModel {
     );
 
     Map<String, dynamic> toJson() => {
-        "id"         : id,
+       // "id"         : id,
         "titulo"     : titulo,
         "valor"      : valor,
         "disponible" : disponible,

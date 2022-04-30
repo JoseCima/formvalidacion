@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:formvalidacion/src/blocks/provider.dart';
 import 'package:formvalidacion/src/models/producto_model.dart';
+import 'package:formvalidacion/src/providers/productos_provider.dart';
 import 'package:formvalidacion/src/utils/utils.dart' as utils;
 
 
@@ -11,13 +13,25 @@ class ProductoPage extends StatefulWidget {
 
 class _ProductoPageState extends State<ProductoPage> {
 
-  final formKey = GlobalKey<FormState>();
+    final formKey = GlobalKey<FormState>();
+    final scaffoldkey = GlobalKey<ScaffoldState>();
 
-  ScanModel producto = new ScanModel();
+    final productosProvider = new ProductosProvider();
+
+    ScanModel producto = new ScanModel();
+    bool _guardando = false;
+    
 
   @override
   Widget build(BuildContext context) {
+
+    final ScanModel prodData = ModalRoute.of(context)!.settings.arguments as ScanModel;
+
+    if (prodData != null){
+      producto = prodData;
+    }
     return Scaffold(
+      key: scaffoldkey,
       appBar: AppBar(
         title: Text('Producto'),
         actions: <Widget>[
@@ -109,19 +123,42 @@ class _ProductoPageState extends State<ProductoPage> {
       textColor: Colors.white,
       label: Text('Guardar'),
       icon: Icon(Icons.save),
-      onPressed: _submit,
+      onPressed: (_guardando) ? null :  _submit ,
     );
   }
 
 void _submit(){
 
-  if(formKey.currentState!.validate()) return;
+  if(!formKey.currentState!.validate()) return;
 
-  formKey.currentState?.save();//Guardando los textFormFields
+  formKey.currentState!.save();//Guardando los textFormFields
+  
 
-  print('Todo Okay');
-  print(producto.titulo);
-  print(producto.valor);
-  print(producto.disponible);
+  setState(() { _guardando = true; });
+
+
+  if(producto.id == null){
+    productosProvider.crearProducto(producto);
+    mostrarSnackbar('Registro guardado!', Colors.blue);
+  }else{
+    productosProvider.editarProducto(producto);
+    mostrarSnackbar('Registro actualizado!', Colors.pink);
+
+  }
+
+  // setState(() { _guardando = false; });
+  Navigator.pop(context);
+}
+
+void mostrarSnackbar(String mensaje, Color color){
+  final snackbar = SnackBar(
+    content: Text(mensaje),
+    duration: Duration(milliseconds: 1500),
+    backgroundColor: color,
+    elevation: 5.0,
+  );
+
+
+  scaffoldkey.currentState!.showSnackBar(snackbar);
 }
 }
