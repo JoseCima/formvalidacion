@@ -1,164 +1,205 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:formvalidacion/src/blocks/provider.dart';
 import 'package:formvalidacion/src/models/producto_model.dart';
 import 'package:formvalidacion/src/providers/productos_provider.dart';
 import 'package:formvalidacion/src/utils/utils.dart' as utils;
-
+import 'package:image_picker/image_picker.dart';
 
 class ProductoPage extends StatefulWidget {
-
   @override
   State<ProductoPage> createState() => _ProductoPageState();
 }
 
 class _ProductoPageState extends State<ProductoPage> {
+  File? imageFile = null;
 
-    final formKey = GlobalKey<FormState>();
-    final scaffoldkey = GlobalKey<ScaffoldState>();
+  final formKey = GlobalKey<FormState>();
+  final scaffoldKey = GlobalKey<ScaffoldState>();
+  final productoProvider = new ProductosProvider();
 
-    final productosProvider = new ProductosProvider();
-
-    ScanModel producto = new ScanModel();
-    bool _guardando = false;
-    
+  ProductoModel producto = new ProductoModel();
+  bool _guardando = false;
+  // File? imageFile;
 
   @override
   Widget build(BuildContext context) {
+    final Object? prodData = ModalRoute.of(context)?.settings.arguments;
 
-    final ScanModel prodData = ModalRoute.of(context)!.settings.arguments as ScanModel;
-
-    if (prodData != null){
-      producto = prodData;
+    // final ProductoModel prodData= ModalRoute.of(context)?.settings.arguments as ProductoModel;
+    if (prodData != null) {
+      producto = prodData as ProductoModel;
     }
+
     return Scaffold(
-      key: scaffoldkey,
+      key: scaffoldKey,
       appBar: AppBar(
         title: Text('Producto'),
         actions: <Widget>[
           IconButton(
-            onPressed: (){}, 
-            icon: Icon(Icons.photo_size_select_actual)
-          ),
-           IconButton(
-            onPressed: (){}, 
-            icon: Icon(Icons.camera_alt)
-          ),
-         ],
+              onPressed: _obtenerGaleria,
+              icon: Icon(Icons.photo_size_select_actual)),
+          IconButton(onPressed: _obtenerFoto, icon: Icon(Icons.camera_alt))
+        ],
       ),
       body: SingleChildScrollView(
-        child: Container(
-          padding: EdgeInsets.all(15.0),
-          child: Form(
+          child: Container(
+        padding: EdgeInsets.all(15.0),
+        child: Form(
             key: formKey,
             child: Column(
               children: <Widget>[
+                _mostrarFoto(),
                 _crearNombre(),
                 _crearPrecio(),
                 _crearDisponible(),
                 _crearBoton(),
-                
               ],
-            ),
-          ),
-        ),
-      ),
+            )),
+      )),
     );
   }
 
-  Widget _crearNombre(){
-
-      return TextFormField(
-        initialValue: producto.titulo,
-        textCapitalization: TextCapitalization.sentences,
-        decoration: InputDecoration(
-          labelText: 'Producto',
-          
-        ),
-        onSaved: (value) => producto.titulo = value!,
-        validator: (value){
-           if(value!.length < 3){
-             return 'Ingrese el nombre del producto';
-           }else{
-             return null;
-           }
+  Widget _crearNombre() {
+    return TextFormField(
+      initialValue: producto.titulo,
+      textCapitalization: TextCapitalization.sentences,
+      decoration: InputDecoration(labelText: 'Producto'),
+      onSaved: (value) => producto.titulo = value.toString(),
+      validator: (value) {
+        if (value!.length < 3) {
+          return 'Ingrese el nombre del producto';
+        } else {
+          return null;
         }
-      );
-  }
-
-  Widget _crearPrecio(){
-   return TextFormField(
-     initialValue: producto.valor.toString(),
-       keyboardType: TextInputType.numberWithOptions(decimal: true),
-        decoration: InputDecoration(
-          labelText: 'Precio',
-        ),
-        onSaved: (value) => producto.valor = double.parse(value!),
-        validator: (value){
-           if(utils.isNumeric(value!)){
-             return null;//pasa la validacion
-           }else{
-             return 'Sólo Números';
-           }
-        },
-      );
-  }
-
-  Widget _crearDisponible(){
-    return SwitchListTile(
-      value: producto.disponible, 
-      title: Text('Disponible:'),
-      activeColor: Colors.pink[300],
-      onChanged: (value) => setState(() {
-        producto.disponible = value;
-      }),
-      );
-  }
-
-  Widget _crearBoton(){
-    return RaisedButton.icon(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20.0)
-      ),
-      color: Colors.pink[300],
-      textColor: Colors.white,
-      label: Text('Guardar'),
-      icon: Icon(Icons.save),
-      onPressed: (_guardando) ? null :  _submit ,
+      },
     );
   }
 
-void _submit(){
-
-  if(!formKey.currentState!.validate()) return;
-
-  formKey.currentState!.save();//Guardando los textFormFields
-  
-
-  setState(() { _guardando = true; });
-
-
-  if(producto.id == null){
-    productosProvider.crearProducto(producto);
-    mostrarSnackbar('Registro guardado!', Colors.blue);
-  }else{
-    productosProvider.editarProducto(producto);
-    mostrarSnackbar('Registro actualizado!', Colors.pink);
-
+  Widget _crearPrecio() {
+    return TextFormField(
+      initialValue: producto.valor.toString(),
+      keyboardType: TextInputType.numberWithOptions(decimal: true),
+      decoration: InputDecoration(labelText: 'Precio'),
+      onSaved: (value) => producto.valor = double.parse(value.toString()),
+      validator: (value) {
+        if (utils.isNumeric(value!)) {
+          return null;
+        } else {
+          return 'Solo números';
+        }
+      },
+    );
   }
 
-  // setState(() { _guardando = false; });
-  Navigator.pop(context);
-}
+  Widget _crearBoton() {
+    return ElevatedButton.icon(
+        onPressed: (_guardando) ? null : _submit,
+        icon: Icon(Icons.save),
+        label: Text('Guardar'),
+        style: ButtonStyle(
+          shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+              RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          )),
+          elevation: MaterialStateProperty.all(0.0),
+          backgroundColor: MaterialStateProperty.all(Colors.pink),
+        ));
+  }
 
-void mostrarSnackbar(String mensaje, Color color){
-  final snackbar = SnackBar(
-    content: Text(mensaje),
-    duration: Duration(milliseconds: 1500),
-    backgroundColor: color,
-    elevation: 5.0,
-  );
+  Widget _crearDisponible() {
+    return SwitchListTile(
+        title: Text('Disponible'),
+        value: producto.disponible,
+        activeColor: Colors.pink,
+        onChanged: (value) {
+          setState(() {
+            producto.disponible = value;
+          });
+        });
+  }
 
+  //METODO SUBMIT
+  void _submit() async {
+    if (!formKey.currentState!.validate()) return;
+    formKey.currentState!.save();
 
-  scaffoldkey.currentState!.showSnackBar(snackbar);
-}
+    setState(() {
+      _guardando = true;
+    });
+
+    if (imageFile != null) {
+      producto.fotoUrl = await productoProvider.subirImagen(imageFile!);
+    }
+
+    if (producto.id == null) {
+      productoProvider.crearProducto(producto);
+      print('Creo el objeto');
+      _mostrarSnackbar('Registro creado');
+    } else {
+      productoProvider.editarProducto(producto);
+      print('Actualizo el objeto');
+      _mostrarSnackbar('Registro actualizado');
+    }
+    Navigator.pop(context);
+  }
+  //FIN METODO SUBMIT
+
+  void _mostrarSnackbar(String mensaje) {
+    final snackBar = SnackBar(
+      content: Text(mensaje),
+      duration: Duration(microseconds: 3000),
+    );
+    scaffoldKey.currentState?.showSnackBar(snackBar);
+  }
+
+  /// Get from gallery
+  _obtenerGaleria() async {
+    PickedFile? pickedFile = await ImagePicker().getImage(
+      source: ImageSource.gallery,
+      maxWidth: 1800,
+      maxHeight: 1800,
+    );
+    if (pickedFile != null) {
+      producto.fotoUrl = null;
+      setState(() {
+        imageFile = File(pickedFile.path);
+      });
+    }
+  }
+
+  /// Get from Camera
+  _obtenerFoto() async {
+    PickedFile? pickedFile = await ImagePicker().getImage(
+      source: ImageSource.camera,
+      maxWidth: 1800,
+      maxHeight: 1800,
+    );
+    if (pickedFile != null) {
+      producto.fotoUrl = null;
+      setState(() {
+        imageFile = File(pickedFile.path);
+      });
+    }
+  }
+
+  _mostrarFoto() {
+    if (producto.fotoUrl != null) {
+      return FadeInImage(
+        placeholder: AssetImage('assets/loading.gif'),
+        image: NetworkImage(producto.fotoUrl!),
+        height: 300.0,
+        fit: BoxFit.contain,
+      );
+    } else {
+      if (imageFile != null) {
+        return Image.file(
+          imageFile!,
+          fit: BoxFit.cover,
+          height: 300.0,
+        );
+      }
+      return Image.asset('assets/no-image.png');
+    }
+  }
 }

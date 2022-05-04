@@ -1,73 +1,86 @@
-
-
 import 'dart:convert';
-
-import 'package:http/http.dart' as http;
-
+import 'dart:io';
+import 'package:mime_type/mime_type.dart';
 import 'package:formvalidacion/src/models/producto_model.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
-class ProductosProvider{
+class ProductosProvider {
+  final String _url =
+      'https://flutter-multiusos-default-rtdb.firebaseio.com';
 
-   final String _url = 'https://flutter-multiusos-default-rtdb.firebaseio.com';
+  Future<bool> crearProducto(ProductoModel producto) async {
+    final url = '$_url/productos.json';
+    final resp =
+        await http.post(Uri.parse(url), body: productoModelToJson(producto));
 
-   Future<bool> crearProducto(ScanModel producto) async{
-       final url = '$_url/productos.json';
+    final decodedData = json.decode(resp.body);
+    print(decodedData);
+    return true;
+  }
 
-       final resp = await http.post(Uri.parse(url), body: scanModelToJson(producto));
+  Future<bool> editarProducto(ProductoModel producto) async {
+    final url = '$_url/productos/${producto.id}.json';
+    final resp =
+        await http.put(Uri.parse(url), body: productoModelToJson(producto));
 
-       final decodedData = json.decode(resp.body);
+    final decodedData = json.decode(resp.body);
+    print(decodedData);
+    print(url);
+    return true;
+  }
 
-       print('Imprimiendo Decoded Data');
-
-       print(decodedData.toString());
-
-       return true;
-   }
-
-
-   Future<List<ScanModel>> cargarProductos() async {
+  Future<List<ProductoModel>> cargarProductos() async {
     final url = '$_url/productos.json';
 
-    //Obteniendo productos
     final resp = await http.get(Uri.parse(url));
 
     final Map<String, dynamic> decodeData = json.decode(resp.body);
-    final List<ScanModel> productos= [];
+    final List<ProductoModel> productos = [];
 
     if (decodeData == null) return [];
 
     decodeData.forEach((id, prod) {
-      final prodTemp= ScanModel.fromJson(prod);
-      prodTemp.id=id;
-     productos.add(prodTemp);
+      final prodTemp = ProductoModel.fromJson(prod);
+      prodTemp.id = id;
+      productos.add(prodTemp);
     });
     print(productos);
     return productos;
   }
 
-  Future<int> borrarProducto(String id) async{
-     final url = '$_url/productos/$id.json';
-     final resp = await http.delete(Uri.parse(url));
+  Future<int> borrarProducto(String id) async {
+    final url = '$_url/productos/$id.json';
+    final resp = await http.delete(Uri.parse(url));
+    print(json.decode(resp.body));
+    return 1;
+  }
+ 
+Future<String?> subirImagen(File imagen) async {
+  final url = Uri.parse(
+      'https://api.cloudinary.com/v1_1/dliqqiozk/image/upload?upload_preset=ag4gld0o');
+  final mimeType = mime(imagen.path)!.split('/'); //image/jpeg
 
-     print (resp.body);
+  final imageUploadRequest = http.MultipartRequest('POST', url);
 
+  final file = await http.MultipartFile.fromPath('file', imagen.path,
+      contentType: MediaType(mimeType[0], mimeType[1]));
+  imageUploadRequest.files.add(file);
 
-     return 1;//ya se hizo
+  final streamResponse = await imageUploadRequest.send();
+  final resp = await http.Response.fromStream(streamResponse);
+
+  if(resp.statusCode !=200 && resp.statusCode != 201){
+  print("Algo salió mal");
+  print(resp.body);
+  return null;
   }
 
-  Future<bool> editarProducto(ScanModel producto) async{
-       final url = '$_url/productos/${producto.id}.json';
-
-       final resp = await http.put(Uri.parse(url), body: scanModelToJson(producto));//put nos sirve para actualizar
-
-       final decodedData = json.decode(resp.body);
-
-       print('Imprimiendo Decoded Data');
-
-       print(decodedData.toString());
-
-       return true;
-   }
+  //Extraer el secure url
+  final respData=json.decode(resp.body);
+  print(respData);
+  return respData["secure_url"];
+}
 
 
 
